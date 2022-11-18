@@ -6,8 +6,6 @@
 #include <semaphore.h>
 #include <fcntl.h>
 
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
 //a bool enum
 typedef enum
 {
@@ -20,61 +18,71 @@ struct chopStick
     unsigned long name;
     unsigned long owner;
     boolean pickedUp;
+    pthread_mutex_t lock; // mutex lock for every chopstick
 };
 struct chopStick chopStickArray[5];
 
-//put down a chopstick
-void putDown(unsigned long name)
+//put down left chopstick
+void putDownLeft(unsigned long name)
 {
-    pthread_mutex_lock(&lock);
-    chopStickArray[name].pickedUp = False;
     chopStickArray[name].owner = 6;
+    chopStickArray[name].pickedUp = False;
+    pthread_mutex_unlock(&(chopStickArray[name].lock)); //unlock mutex after chopstick is put down
+}
 
-    int tempName = (name + 1) % 5;
-    chopStickArray[tempName].pickedUp = False;
-    chopStickArray[tempName].owner = 6;
-    pthread_mutex_unlock(&lock);
-    printf("Proffesor %lu eating -> put down chopsticks\n", name);
+//put down right chopstick
+void putDownRight (unsigned long name)
+{
+    chopStickArray[name + 1].owner = 6;
+    chopStickArray[name + 1].pickedUp = False;
+    pthread_mutex_unlock(&(chopStickArray[(name + 1) % 5].lock)); //unlock mutex after chopstick is put down
+}
+
+//eat
+void eat (unsigned long name, boolean* eaten) 
+{
+    int randomNumber = 0;
+    // if professors has both chopsticks he can eat
+    if (chopStickArray[name].owner == name && chopStickArray[name + 1].owner == name)
+    {
+        printf("Professor %lu got right -> eating\n", name);
+        *eaten = True;
+        randomNumber = rand() % 6 + 5;
+        sleep(randomNumber);
+        putDownLeft(name);
+        putDownRight(name);
+        printf("Professor %lu eating -> dropped both chopsticks\n", name);
+    }
 }
 
 //picks up left chopstick
 void pickLeft(unsigned long name)
 {
-    while (chopStickArray[name].pickedUp != False);
-    chopStickArray[name].pickedUp = True;
-    chopStickArray[name].owner = name;
-    printf("Proffesor %lu thinking -> got left chopstick\n", name);
+    pthread_mutex_lock(&(chopStickArray[name].lock)); // lock mutex when left chopstick is picked up
+    if (chopStickArray[name].pickedUp == False)
+    {
+        chopStickArray[name].pickedUp = True;
+        chopStickArray[name].owner = name;
+        printf("Professor %lu thinking -> got left chopstick\n", name);
+    }
 }
 
 //tries to pick up right chopstick
-void pickRight(unsigned long name, boolean *eaten)
+void pickRight(unsigned long name, boolean* eaten)
 {
-    int tempName = (name + 1) % 5;
-    int randomNumber = 0;
-    boolean droppedLeft = False;
-
-    //drop left if right is not available
-    // while (chopStickArray[tempName].pickedUp != False && droppedLeft == False){
-        pthread_mutex_lock(&lock);
-        chopStickArray[name].pickedUp = False;
-        chopStickArray[name].owner = 6;
-        droppedLeft = True;
-        pthread_mutex_unlock(&lock);
-    // };
-    //only run if professor didnt drop left
-    if(droppedLeft == False){
-        pthread_mutex_lock(&lock);
-        chopStickArray[tempName].pickedUp = True;
-        chopStickArray[tempName].owner = name;
-        printf("Proffesor %lu thinking -> got right chopstick -> eating\n", name);
-        pthread_mutex_unlock(&lock);
-
-        randomNumber = rand() % 6 + 5;
-        *eaten = True;
-        putDown(name);
+    if (chopStickArray[name + 1].pickedUp == False)
+    {
+        pthread_mutex_lock(&(chopStickArray[(name + 1) % 5].lock)); // lock mutex when right chopstick is picked up
+        printf("Professor %lu thinking -> got right chopstick\n", name);
+        chopStickArray[name + 1].pickedUp = True;
+        chopStickArray[name + 1].owner = name;
+        eat(name, eaten);
     }
-    else{
-        printf("Proffesor %lu Dropped right chopstick, resetting\n", name);
+    else 
+    {
+        // Drop the left chopstick
+        putDownLeft(name);
+        printf("Professor %lu thinking -> dropped left -> thinking\n", name);
     }
 }
 
@@ -84,15 +92,14 @@ void *professor(void *buf)
     int randomNumber = 0;
     boolean eaten = False;
 
-    //only loop if not eaten
-    while(eaten == False){
+    while (eaten == False) // loop until every professor has eaten
+    {
         randomNumber = rand() % 5 + 1;
         sleep(randomNumber);
         pickLeft(name);
-
         randomNumber = rand() % 7 + 2;
         sleep(randomNumber);
-        pickRight(name, &eaten); 
+        pickRight(name, &eaten);
     }
     return NULL;
 }
@@ -115,6 +122,7 @@ int main(int argc, char const *argv[])
         chopStickArray[id].name = id;
         chopStickArray[id].owner = 6;
         chopStickArray[id].pickedUp = False;
+        pthread_mutex_init(&(chopStickArray[id].lock), NULL);
     }
     for (unsigned long id = 0; id < 5; id++)
     {
