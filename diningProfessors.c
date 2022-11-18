@@ -4,11 +4,13 @@
 #include <time.h>
 #include <unistd.h>
 
+//a bool enum
 typedef enum
 {
     False,
     True
 } boolean;
+
 struct chopStick
 {
     unsigned long name;
@@ -17,9 +19,9 @@ struct chopStick
 };
 struct chopStick chopStickArray[5];
 
+//put down a chopstick
 void putDown(unsigned long name)
 {
-
     chopStickArray[name].pickedUp = False;
     chopStickArray[name].owner = 6;
 
@@ -29,6 +31,7 @@ void putDown(unsigned long name)
     printf("Proffesor %lu eating -> put down chopsticks\n", name);
 }
 
+//picks up left chopstick
 void pickLeft(unsigned long name)
 {
     while (chopStickArray[name].pickedUp != False);
@@ -37,17 +40,20 @@ void pickLeft(unsigned long name)
     printf("Proffesor %lu thinking -> got left chopstick\n", name);
 }
 
+//tries to pick up right chopstick
 void pickRight(unsigned long name, boolean *eaten)
 {
     int tempName = (name + 1) % 5;
     int randomNumber = 0;
     boolean droppedLeft = False;
 
+    //drop left if right is not available
     while (chopStickArray[tempName].pickedUp != False && droppedLeft == False){
         chopStickArray[name].pickedUp = False;
         chopStickArray[name].owner = 6;
         droppedLeft = True;
     };
+    //only run if professor didnt drop left
     if(droppedLeft == False){
         chopStickArray[tempName].pickedUp = True;
         chopStickArray[tempName].owner = name;
@@ -68,8 +74,9 @@ void *professor(void *buf)
     int randomNumber = 0;
     boolean eaten = False;
 
+    //only loop if not eaten
     while(eaten == False){
-       randomNumber = rand() % 5 + 1;
+        randomNumber = rand() % 5 + 1;
         sleep(randomNumber);
         pickLeft(name);
 
