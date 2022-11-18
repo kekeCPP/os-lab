@@ -3,6 +3,10 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <semaphore.h>
+#include <fcntl.h>
+
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 //a bool enum
 typedef enum
@@ -22,12 +26,14 @@ struct chopStick chopStickArray[5];
 //put down a chopstick
 void putDown(unsigned long name)
 {
+    pthread_mutex_lock(&lock);
     chopStickArray[name].pickedUp = False;
     chopStickArray[name].owner = 6;
 
     int tempName = (name + 1) % 5;
     chopStickArray[tempName].pickedUp = False;
     chopStickArray[tempName].owner = 6;
+    pthread_mutex_unlock(&lock);
     printf("Proffesor %lu eating -> put down chopsticks\n", name);
 }
 
@@ -48,16 +54,20 @@ void pickRight(unsigned long name, boolean *eaten)
     boolean droppedLeft = False;
 
     //drop left if right is not available
-    while (chopStickArray[tempName].pickedUp != False && droppedLeft == False){
+    // while (chopStickArray[tempName].pickedUp != False && droppedLeft == False){
+        pthread_mutex_lock(&lock);
         chopStickArray[name].pickedUp = False;
         chopStickArray[name].owner = 6;
         droppedLeft = True;
-    };
+        pthread_mutex_unlock(&lock);
+    // };
     //only run if professor didnt drop left
     if(droppedLeft == False){
+        pthread_mutex_lock(&lock);
         chopStickArray[tempName].pickedUp = True;
         chopStickArray[tempName].owner = name;
         printf("Proffesor %lu thinking -> got right chopstick -> eating\n", name);
+        pthread_mutex_unlock(&lock);
 
         randomNumber = rand() % 6 + 5;
         *eaten = True;

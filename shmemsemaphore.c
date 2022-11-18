@@ -14,6 +14,7 @@
 
 int main(int argc, char **argv)
 {
+	
 	//initialize randomizer
 	srand(time(NULL));
 	float randomNumber = 0.0;
@@ -29,8 +30,8 @@ int main(int argc, char **argv)
 	int var1 = 0, var2 = 0, shmid = -1;
 	struct shmid_ds *shm_buf;
 
-    sem_t *sem_id1 = sem_open("semProducer", O_CREAT, O_RDWR, 0);
-	sem_t *sem_id2 = sem_open("semConsumer", O_CREAT, O_RDWR, 1);
+    sem_t *sem_id1 = sem_open("semProducer", O_CREAT, O_RDWR, 10);
+	sem_t *sem_id2 = sem_open("semConsumer", O_CREAT, O_RDWR, 10);
 
 	/* allocate a chunk of shared memory */
 	shmid = shmget(IPC_PRIVATE, SHMSIZE, IPC_CREAT | SHM_R | SHM_W);
@@ -46,7 +47,8 @@ int main(int argc, char **argv)
 			sem_wait(sem_id2);
             
             var1++;
-			printf("Sending %d\n", var1); fflush(stdout);
+			printf("Sending %d\n", var1); 
+			fflush(stdout);
 
 			//dont let producer go over consumer
 			// while(shmp->producer == shmp->consumer - 1 );
